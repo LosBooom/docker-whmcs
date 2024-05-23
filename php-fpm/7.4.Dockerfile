@@ -16,7 +16,9 @@ RUN set -eux; \
           libjpeg-dev \
           libpng-dev \
           libfreetype6-dev \
-          libmcrypt-dev; \
+          libmcrypt-dev \
+          libc-client-dev \
+          libkrb5-dev; \
   rm -rf /var/lib/apt/lists/*
 
 # Install additional PHP Packages and WHMCS Requirements
@@ -43,10 +45,14 @@ RUN rm /etc/apt/preferences.d/no-debian-php && \
     apt-get -y install libxml2-dev php-soap && \
     docker-php-ext-install soap;
 
+# Install IMAP extension
+RUN docker-php-ext-configure imap --with-kerberos --with-imap-ssl && \
+    docker-php-ext-install imap
+
 # Install the php ioncube loader
 # Essential part to run WHMCS
 RUN cd /tmp \
-    && curl -o ioncube.tar.gz https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz \
+    && curl -o ioncube.tar.gz https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_aarch64.tar.gz \
     && tar zxpf ioncube.tar.gz \
     && mv ioncube/ioncube_loader_lin_7.4.so /usr/local/lib/php/extensions/* \
     && rm -Rf ioncube.tar.gz ioncube \

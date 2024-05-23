@@ -9,8 +9,6 @@ volumes:
     driver: ${VOLUMES_DRIVER}
 
 services:
-
-# nginx
   nginx:
     build:
       context: ./nginx
@@ -18,8 +16,8 @@ services:
         - PHP_UPSTREAM_CONTAINER=${NGINX_PHP_UPSTREAM_CONTAINER}
         - PHP_UPSTREAM_PORT=${NGINX_PHP_UPSTREAM_PORT}
     volumes:
-      - ${WHMCS_PATH}:/var/www/html
-      - ./nginx/sites/:/etc/nginx/sites-available
+      - ${WHMCS_PATH}:${WHMCS_PATH_DOCKER}
+      - ./nginx/templates:/etc/nginx/templates
       - ./.data/logs-nginx/:/var/log/nginx
     ports:
       - ${NGINX_PORT_HTTP}:80
@@ -27,14 +25,16 @@ services:
       - php-fpm
     networks:
       - whmcs
+    environment:
+      WHMCS_PATH_DOCKER: ${WHMCS_PATH_DOCKER}
+      WHMCS_PATH_URL: ${WHMCS_PATH_URL}
 
-# PHP-FPM
   php-fpm:
     build:
       context: ./php-fpm
       dockerfile: ${PHP_VERSION}.Dockerfile
     volumes:
-      - ${WHMCS_PATH}:/var/www/html
+      - ${WHMCS_PATH}:${WHMCS_PATH_DOCKER}
       - ./php-fpm/php${PHP_VERSION}.ini:/usr/local/etc/php/php.ini
     expose:
       - "9000"
@@ -45,30 +45,43 @@ services:
     networks:
       - whmcs
 
-# MySQL
   mysql:
     build:
       context: ./mysql
       args:
-        - MYSQL_VERSION=${MYSQL_VERSION}
+        - MARIADB_VERSION=${MARIADB_VERSION}
     environment:
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
     volumes:
       - ./.data/mysql:/var/lib/mysql
       - ./mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     ports:
-      - "${MYSQL_PORT}:3306"
+      - "${MARIADB_PORT}:3306"
     networks:
       - whmcs
 
-# maildev - to test emails
-  maildev:
-    build: ./maildev
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    platform: linux/amd64
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mysql
+      - PMA_USER=root
+      - PMA_PASSWORD=${MARIADB_ROOT_PASSWORD}
     ports:
-      - "${MAILDEV_HTTP_PORT}:80"
-      - "${MAILDEV_SMTP_PORT}:25"
+      - ${PHPMYADMIN_PORT}:80
+    depends_on:
+      - mysql
     networks:
       - whmcs
+
+  # maildev:
+  #   build: ./maildev
+  #   ports:
+  #     - "${MAILDEV_HTTP_PORT}:80"
+  #     - "${MAILDEV_SMTP_PORT}:25"
+  #   networks:
+  #     - whmcs

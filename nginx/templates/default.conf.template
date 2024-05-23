@@ -8,8 +8,8 @@ server {
     # ssl_certificate /etc/nginx/ssl/default.crt;
     # ssl_certificate_key /etc/nginx/ssl/default.key;
 
-    server_name localhost;
-    root /var/www/html;
+    server_name $WHMCS_PATH_URL;
+    root $WHMCS_PATH_DOCKER;
     index index.php index.html index.htm;
 
     location / {
